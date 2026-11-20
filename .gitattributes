@@ -1,0 +1,7 @@
+# Check text out with LF everywhere (also on Windows with core.autocrlf), so the src/ copied by main.ts and its
+# dossier.json come out byte-identical on every machine.
+* text=auto eol=lf
+*.rbxl binary
+*.rbxm binary
+*.png binary
+*.jpg binary
