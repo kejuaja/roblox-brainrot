@@ -17,6 +17,16 @@ mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
 Open `game.rbxl` in Roblox Studio and press **Play**, or play the published experience listed in `PLAY.json`.
 
+The `screenshots/` folder holds four in-game captures taken in a Studio playtest:
+- **1-cover.png** shows a full base with mutations.
+- **2-field.png** shows the Boss Bandit fleeing across the railway as the train comes.
+- **3-disaster.png** shows a Farm Tornado.
+- **4-base.png** shows the 144-entry Index Book.
+
+The `assets/` folder holds the Roblox store art made from the cover shot, both titled BRAINROT VILLAGE in Fredoka:
+- `cover-1920x1080.png` is the HD cover photo.
+- `icon-512x512.png` is the game icon.
+
 ## Gameplay
 
 - **Field with four zones.** The zones are Chill Meadow, Sus Savanna, Cringe Canyon and Ohio Outskirts. The farther
@@ -30,10 +40,12 @@ Open `game.rbxl` in Roblox Studio and press **Play**, or play the published expe
   - **Stash.** The **📦 STASH** button opens your personal bagspace. It holds 2 brainrots at first, and you can
     upgrade it in the Upgrade Shop. Store what you carry, look at it and take it out again whenever you like.
     Disasters, thieves and bandits can't touch the Stash, and it is saved between sessions. A rebirth empties it.
+  - **Store.** **📦 STORE** or the **F** key stashes the top carried brainrot straight away.
   - **Drop.** **⬇ DROP** or the **G** key puts the top carried brainrot down at your feet. It stays there until
     someone grabs it again.
   - **Pick Up.** Every base pedestal has an owner-only **Pick Up** prompt (R) next to Sell. It lifts the brainrot
-    back into your hands, or into the Stash when your hands are full.
+    back into your hands, or into the Stash when your hands are full. For 2.5 seconds afterwards, standing on your
+    tiles does not auto-place it again.
 - **The cast.** There are 16 farmyard brainrots. Each is a farm animal head (cow, bull, chicken, rooster, goat,
   pig, horse) fused with village farm gear (milk bucket, milk can, hay bale, wheelbarrow, tractor, harvester, milk
   tanker, silo, windmill, barn). Examples include Muccarello Secchiello, Trattorino Muuu, Caprone Mulino, Toro
@@ -45,13 +57,17 @@ Open `game.rbxl` in Roblox Studio and press **Play**, or play the published expe
 - **Village railway.** A single winding track crosses the village. A steam train rolls along it every 45 seconds,
   and anyone standing on the rails gets run over. Halfway along it drops a cargo brainrot by the tracks, with a 35%
   chance of the **TRAIN GOD** mutation. A TRAIN GOD doubles **all** income of the base that holds it.
-- **3x3 bases.** Every plot has the same nine-slot grid.
+- **Farmstead backdrop.** Behind the bases stands a busy farm: a huge red barn, grain silos, country houses, hay
+  stacks and rows of trees.
+- **3x3 bases.** Every plot has the same nine-slot grid behind a tall, slim wooden farm gate. The gate's arch
+  carries the owner's name (for example KEJUONYA'S FARM) and has a lantern on each post.
 - **Rarity and mutations.** The rarity ladder runs Common → Rare → Epic → Legendary → Mythic → Brainrot God →
   Secret. Nine mutations: Normal, Gold x2, Diamond x3, Rainbow x5, Lava x7, Galaxy x10, Radioactive x15
   (ultra-rare roll), Celestial x25 (Fuse Machine only) and TRAIN GOD. ATK grows with the mutation as well.
-- **DEX (Index Book).** The **📖 DEX** button opens a book of all 16 brainrots (3D portraits, black
-  silhouettes until you own one, and dots for every mutation you've owned it in) and all 9 mutations (how to get
-  each one). A progress bar tracks brainrots, mutations and the 144 variants. The DEX is saved and survives
+- **DEX (Index Book).** The **📖 DEX** button opens a single collection. Every brainrot + mutation pair is its
+  own entry, 16 x 9 = 144 in all. Each brainrot gets a section with a 3D portrait (a black silhouette until you
+  own one) and nine mutation cards that light up once owned. A star marks a complete set. The progress bar
+  counts the collection X/144. The DEX is saved and survives
   rebirths.
 - **Farm weapons.** The **⚔️ ARMS** shop sells five weapons: Farm Pitchfork (long reach), Tractor Exhaust Pipe
   (always smoking, its diesel cloud dazes the bandit), Milk Churn Hammer (huge knockback), Golden Corn Bat (30%

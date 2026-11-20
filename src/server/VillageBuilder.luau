@@ -6,6 +6,7 @@
 --   * the loop road with street lanterns and the red tractor tagged "PatrolTractor" (driven on clients)
 --   * a duck pond, a sheep pen, hay stacks, flower patches (tagged "FlowerPatch"), trees and fences
 --   * the giant 3D World Leaderboard board (LeaderboardService fills it)
+--   * the farmstead scenery behind the bases: a huge red barn, silos, country houses, hay and trees
 -- Everything that moves - farmers, chickens, sheep, ducks, birds, butterflies, the tractor, the windmill -
 -- is animated by the VillageLife client script from the server clock, so every player sees the same village.
 
@@ -261,7 +262,7 @@ local function gables(parent: Instance, at, w: number, h: number, z: number, ris
 	end
 end
 
-local function redBarn(parent: Instance, position: Vector3)
+local function redBarn(parent: Instance, position: Vector3): Model
 	local model = Instance.new("Model")
 	model.Name = "RedBarn"
 	model.Parent = parent
@@ -307,9 +308,10 @@ local function redBarn(parent: Instance, position: Vector3)
 		hayBale(model, at(x, 1, -d / 2 - 3) * CFrame.Angles(0, math.rad(i * 20), 0))
 	end
 	hayBale(model, at(-7.2, 3, -d / 2 - 3))
+	return model
 end
 
-local function silo(parent: Instance, position: Vector3)
+local function silo(parent: Instance, position: Vector3): Model
 	local model = Instance.new("Model")
 	model.Name = "GrainSilo"
 	model.Parent = parent
@@ -331,6 +333,7 @@ local function silo(parent: Instance, position: Vector3)
 	surfaceText(plate, Enum.NormalId.Front, "GRAIN", TRIM)
 	-- A grain chute sloping into the barn.
 	part(model, "Chute", Vector3.new(1.4, 1.4, 16), CFrame.new(position + Vector3.new(8, 22, 0)) * CFrame.Angles(0, math.rad(90), math.rad(-25)), Color3.fromRGB(160, 165, 170), Enum.Material.Metal).CanCollide = false
+	return model
 end
 
 local function windmill(parent: Instance, position: Vector3)
@@ -546,6 +549,120 @@ local function leaderboard(parent: Instance, position: Vector3)
 	return { cash = columns.cash, rebirths = columns.rebirths, status = status }
 end
 
+-- A countryside wooden house: plank walls, a door with a porch light, warm windows, a pitched roof and a
+-- chimney. Its door (local -Z) faces `yaw`.
+local function farmhouse(parent: Instance, position: Vector3, yaw: number, wall: Color3, roof: Color3)
+	local model = Instance.new("Model")
+	model.Name = "FarmHouse"
+	model.Parent = parent
+	local base = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+	local function at(x: number, y: number, z: number): CFrame
+		return base * CFrame.new(x, y, z)
+	end
+	local w, d, h = 16, 13, 10
+	part(model, "Footing", Vector3.new(w + 1, 0.8, d + 1), at(0, 0.4, 0), STONE, Enum.Material.Cobblestone)
+	part(model, "Walls", Vector3.new(w, h, d), at(0, h / 2 + 0.8, 0), wall, Enum.Material.WoodPlanks)
+	for _, side in { -1, 1 } do
+		part(model, "CornerTrim", Vector3.new(0.8, h, 0.8), at(side * w / 2, h / 2 + 0.8, -d / 2), TRIM, Enum.Material.WoodPlanks)
+		local window = part(model, "Window", Vector3.new(2.6, 2.6, 0.2), at(side * 4.6, 5.8, -d / 2 - 0.1), Color3.fromRGB(255, 215, 130), Enum.Material.Neon)
+		window.Transparency = 0.1
+		part(model, "WindowFrame", Vector3.new(3.2, 3.2, 0.15), at(side * 4.6, 5.8, -d / 2 - 0.05), TRIM, Enum.Material.Wood)
+		part(model, "FlowerBox", Vector3.new(3.2, 0.7, 0.8), at(side * 4.6, 4.1, -d / 2 - 0.45), DARK_WOOD, Enum.Material.Wood)
+	end
+	part(model, "Door", Vector3.new(3.2, 6, 0.3), at(0, 3.8, -d / 2 - 0.1), Color3.fromRGB(120, 55, 35), Enum.Material.Wood)
+	part(model, "PorchRoof", Vector3.new(6, 0.4, 3), at(0, 7.6, -d / 2 - 1.4) * CFrame.Angles(math.rad(12), 0, 0), roof, Enum.Material.Slate)
+	local porchLight = part(model, "PorchLight", Vector3.new(0.6, 0.8, 0.6), at(2.3, 6.6, -d / 2 - 0.4), Color3.fromRGB(255, 200, 110), Enum.Material.Neon)
+	local glow = Instance.new("PointLight")
+	glow.Color = Color3.fromRGB(255, 190, 110)
+	glow.Range = 12
+	glow.Parent = porchLight
+	local slope = math.rad(33)
+	local halfSpan = w / 2 + 1
+	local roofLength = halfSpan / math.cos(slope)
+	for _, side in { -1, 1 } do
+		part(model, "Roof", Vector3.new(roofLength, 0.8, d + 2), at(side * halfSpan / 2, h + 0.8 + math.tan(slope) * halfSpan / 2, 0) * CFrame.Angles(0, 0, side * -slope), roof, Enum.Material.Slate)
+	end
+	gables(model, at, w, h + 0.8, -d / 2, math.tan(slope) * (w / 2), wall)
+	gables(model, at, w, h + 0.8, d / 2, math.tan(slope) * (w / 2), wall)
+	part(model, "Chimney", Vector3.new(1.8, 6, 1.8), at(4, h + 5, 2), Color3.fromRGB(130, 105, 95), Enum.Material.Brick)
+	return model
+end
+
+-- Turns a freshly built model half way round about `position`, so a building facing -Z faces +Z instead.
+local function turnAround(model: Model, position: Vector3)
+	local pivot = CFrame.new(position)
+	model:PivotTo(pivot * CFrame.Angles(0, math.pi, 0) * pivot:Inverse() * model:GetPivot())
+end
+
+-- Grows a model about its own centre, then sets it back down on the ground at `groundY`.
+local function enlarge(model: Model, scale: number, groundY: number)
+	model:ScaleTo(scale)
+	local box, size = model:GetBoundingBox()
+	local bottom = box.Position.Y - size.Y / 2
+	model:PivotTo(model:GetPivot() + Vector3.new(0, groundY - bottom, 0))
+end
+
+-- The farmstead behind the bases: a meadow at plateau height beyond the back wall (out of bounds, scenery
+-- only) with a huge red barn and grain silos behind the middle plots, wooden country houses, hay stacks,
+-- a fence and dense trees - so the view behind the nine slots is a busy farm instead of empty sky.
+local function farmBackdrop(parent: Instance)
+	local folder = Instance.new("Folder")
+	folder.Name = "FarmBackdrop"
+	folder.Parent = parent
+	local top = TOP + 0.2
+	local ground = part(folder, "BackdropMeadow", Vector3.new(270, TOP + 0.2, 150), CFrame.new(5, top / 2, -246), Color3.fromRGB(105, 175, 75), Enum.Material.Grass)
+	ground.CanCollide = true
+	local path = part(folder, "BackdropLane", Vector3.new(250, 0.2, 9), CFrame.new(5, top + 0.1, -186), Color3.fromRGB(165, 130, 90), Enum.Material.Ground)
+	path.CanCollide = false
+	fence(folder, Vector3.new(-118, top, -174), Vector3.new(128, top, -174))
+
+	local barn = Instance.new("Model")
+	barn.Name = "BigRedBarn"
+	barn.Parent = folder
+	redBarn(barn, Vector3.new(0, top, -214))
+	turnAround(barn, Vector3.new(0, top, -214))
+	enlarge(barn, 1.6, top)
+	for i, spot in { Vector3.new(36, top, -222), Vector3.new(50, top, -232) } do
+		local siloModel = Instance.new("Model")
+		siloModel.Name = "BackdropSilo" .. i
+		siloModel.Parent = folder
+		silo(siloModel, spot)
+		turnAround(siloModel, spot)
+		enlarge(siloModel, if i == 1 then 1.25 else 1.05, top)
+	end
+
+	local houses = {
+		{ x = -46, z = -200, wall = Color3.fromRGB(235, 225, 200), roof = Color3.fromRGB(150, 55, 45) },
+		{ x = -84, z = -212, wall = Color3.fromRGB(170, 205, 230), roof = Color3.fromRGB(80, 70, 70) },
+		{ x = 80, z = -204, wall = Color3.fromRGB(245, 220, 150), roof = Color3.fromRGB(120, 60, 40) },
+		{ x = 110, z = -222, wall = Color3.fromRGB(200, 140, 100), roof = Color3.fromRGB(70, 90, 60) },
+		{ x = -112, z = -238, wall = Color3.fromRGB(230, 200, 200), roof = Color3.fromRGB(110, 50, 60) },
+	}
+	for _, spec in houses do
+		farmhouse(folder, Vector3.new(spec.x, top, spec.z), math.pi + rng:NextNumber(-0.2, 0.2), spec.wall, spec.roof)
+	end
+	for _, p in {
+		Vector3.new(-26, top, -190), Vector3.new(24, top, -192), Vector3.new(58, top, -196), Vector3.new(-64, top, -192),
+		Vector3.new(96, top, -192), Vector3.new(-100, top, -196), Vector3.new(-22, top, -232), Vector3.new(68, top, -240),
+	} do
+		haystack(folder, p)
+	end
+	for _, x in { -8, 8, -30, 30 } do
+		hayRoll(folder, Vector3.new(x, top, -194 - math.abs(x) * 0.1))
+	end
+	-- Rows of dense trees behind and between the buildings.
+	for row = 0, 2 do
+		local z = -258 - row * 16
+		for x = -116, 124, 15 do
+			local jitter = Vector3.new(rng:NextNumber(-4, 4), 0, rng:NextNumber(-4, 4))
+			tree(folder, Vector3.new(x, top, z) + jitter, 1.2 + rng:NextNumber(0, 0.6) + row * 0.15)
+		end
+	end
+	for _, p in { Vector3.new(-64, top, -226), Vector3.new(-20, top, -246), Vector3.new(24, top, -250), Vector3.new(96, top, -244), Vector3.new(-104, top, -214), Vector3.new(66, top, -218) } do
+		tree(folder, p, 1.3 + rng:NextNumber(0, 0.4))
+	end
+end
+
 function VillageBuilder.build(world)
 	local folder = Instance.new("Folder")
 	folder.Name = "Village"
@@ -618,6 +735,7 @@ function VillageBuilder.build(world)
 	-- Fences along the village's outer edges.
 	fence(folder, Vector3.new(V.minX + 2, 0, V.minZ + 2), Vector3.new(V.minX + 2, 0, V.maxZ - 2))
 	fence(folder, Vector3.new(V.minX + 2, 0, V.maxZ - 2), Vector3.new(V.maxX, 0, V.maxZ - 2))
+	farmBackdrop(world.folder)
 	return { leaderboard = board }
 end
 

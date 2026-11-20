@@ -2,10 +2,10 @@
 -- workspace disaster attributes) and sends requests through the Request remote.
 --   bottom-left   cash panel: cash, $/sec, vault, carry, slots, rebirths
 --   top-center    farm disaster bar (tornado / bull stampede) with countdown, plus the zone you are in
---   bottom-right  DEX + ARMS, STASH + DROP (G), UPGRADES / REBIRTH / LOCK BASE; their panels open from them
+--   bottom-right  DEX | ARMS, STASH | LOCK, STORE (F) | DROP (G), UPGRADES, REBIRTH; panels open from them
 --   top-right     "?" reopens the Welcome board (shown automatically to new players)
---   centre        DEX (Index Book: 16 brainrots + 9 mutations with progress), WEAPONS shop, Barn Fuse panel
---   top-center    notification feed; "+$123" popups when cash comes in
+--   centre        DEX (one collection of 144 brainrot x mutation entries with progress), WEAPONS shop, Barn Fuse panel
+--   bottom-left   one-line toasts above the cash panel (1.5 s each); "+$123" popups when cash comes in
 -- The village market stalls' prompts (attribute OpenPanel) open the same panels as the buttons.
 -- The top-left corner is left free for Roblox's own menu buttons.
 
@@ -164,8 +164,11 @@ local zoneLabel = label(gui, {
 })
 
 -- Notification feed (under the disaster bar)
-local feed = create("Frame", { Name = "Feed", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 112), Size = UDim2.fromOffset(640, 200), BackgroundTransparency = 1 }, gui)
-create("UIListLayout", { Padding = UDim.new(0, 6), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, feed)
+-- Toasts sit in one slim line each just above the cash panel (bottom-left), newest at the bottom.
+local TOAST_SECONDS = 1.5
+local TOAST_MAX = 3
+local feed = create("Frame", { Name = "Feed", AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -200), Size = UDim2.fromOffset(460, 100), BackgroundTransparency = 1 }, gui)
+create("UIListLayout", { Padding = UDim.new(0, 4), HorizontalAlignment = Enum.HorizontalAlignment.Left, VerticalAlignment = Enum.VerticalAlignment.Bottom, SortOrder = Enum.SortOrder.LayoutOrder }, feed)
 
 -- Action buttons (bottom-right)
 local actions = create("Frame", { Name = "Actions", AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -16, 1, -16), Size = UDim2.fromOffset(210, 312), BackgroundTransparency = 1 }, gui)
@@ -173,12 +176,14 @@ create("UIListLayout", { Padding = UDim.new(0, 10), VerticalAlignment = Enum.Ver
 local topRow = create("Frame", { Name = "TopRow", Size = UDim2.new(1, 0, 0, 54), BackgroundTransparency = 1, LayoutOrder = -1 }, actions)
 local dexButton = button(topRow, "📖 DEX", Color3.fromRGB(150, 90, 230), { Size = UDim2.new(0.5, -5, 1, 0) })
 local weaponsButton = button(topRow, "⚔️ ARMS", Color3.fromRGB(230, 140, 40), { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.5, -5, 1, 0) })
-local bagRow = create("Frame", { Name = "BagRow", Size = UDim2.new(1, 0, 0, 54), BackgroundTransparency = 1, LayoutOrder = 0 }, actions)
-local stashButton = button(bagRow, "📦 STASH", Color3.fromRGB(220, 150, 50), { Size = UDim2.new(0.5, -5, 1, 0) })
+local stashRow = create("Frame", { Name = "StashRow", Size = UDim2.new(1, 0, 0, 54), BackgroundTransparency = 1, LayoutOrder = 0 }, actions)
+local stashButton = button(stashRow, "📦 STASH", Color3.fromRGB(220, 150, 50), { Size = UDim2.new(0.5, -5, 1, 0) })
+local lockButton = button(stashRow, "🔓 LOCK", Color3.fromRGB(230, 70, 70), { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.5, -5, 1, 0) })
+local bagRow = create("Frame", { Name = "BagRow", Size = UDim2.new(1, 0, 0, 54), BackgroundTransparency = 1, LayoutOrder = 1 }, actions)
+local storeButton = button(bagRow, "📦 STORE (F)", Color3.fromRGB(70, 150, 200), { Size = UDim2.new(0.5, -5, 1, 0) })
 local dropButton = button(bagRow, "⬇ DROP (G)", Color3.fromRGB(150, 110, 80), { AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = UDim2.new(0.5, -5, 1, 0) })
-local upgradesButton = button(actions, "⚡ UPGRADES", Color3.fromRGB(60, 140, 255), { Size = UDim2.new(1, 0, 0, 54), LayoutOrder = 1 })
-local rebirthButton = button(actions, "♻️ REBIRTH", Color3.fromRGB(200, 70, 230), { Size = UDim2.new(1, 0, 0, 54), LayoutOrder = 2 })
-local lockButton = button(actions, "🔓 LOCK BASE", Color3.fromRGB(230, 70, 70), { Size = UDim2.new(1, 0, 0, 54), LayoutOrder = 3 })
+local upgradesButton = button(actions, "⚡ UPGRADES", Color3.fromRGB(60, 140, 255), { Size = UDim2.new(1, 0, 0, 54), LayoutOrder = 2 })
+local rebirthButton = button(actions, "♻️ REBIRTH", Color3.fromRGB(200, 70, 230), { Size = UDim2.new(1, 0, 0, 54), LayoutOrder = 3 })
 
 local function panel(name: string, title: string, size: Vector2, accent: Color3)
 	local frame = create("Frame", {
@@ -266,7 +271,7 @@ local function bigPanel(name: string, title: string, accent: Color3, maxSize: Ve
 	return frame, body
 end
 
-local dexPanel, dexBody = bigPanel("DexPanel", "📖 BRAINROT DEX", Color3.fromRGB(190, 140, 255), Vector2.new(760, 600), 128)
+local dexPanel, dexBody = bigPanel("DexPanel", "📖 BRAINROT DEX · COLLECTION", Color3.fromRGB(190, 140, 255), Vector2.new(760, 620), 112)
 local weaponPanel, weaponBody = bigPanel("WeaponPanel", "⚔️ FARM WEAPONS", Color3.fromRGB(255, 170, 60), Vector2.new(600, 600), 50)
 local fusePanel, fuseBody = bigPanel("FusePanel", "🧬 BARN FUSE MACHINE", Color3.fromRGB(200, 130, 255), Vector2.new(640, 560), 50)
 
@@ -295,11 +300,14 @@ weaponsButton.MouseButton1Click:Connect(function()
 end)
 
 ---------------------------------------------------------------------------------------------------------------
--- DEX: the Index Book. Two tabs - the 16 brainrots (3D portrait, silhouette until found, which of the 9
--- mutations you've owned it in) and the 9 mutations - and a progress bar over brainrots + mutations.
+-- DEX: the Index Book, one single collection. Every brainrot + mutation pair is its own entry (16 x 9 = 144):
+-- one section per brainrot (3D portrait - a silhouette until found - name, rarity, x/9 and a star when the set
+-- is complete) holding nine entry cards, one per mutation, that light up in the mutation's colour once owned.
 ---------------------------------------------------------------------------------------------------------------
 local DIM = Color3.fromRGB(70, 68, 92)
-local dexProgressBack = create("Frame", { Position = UDim2.fromOffset(16, 50), Size = UDim2.new(1, -32, 0, 28), BackgroundColor3 = Color3.fromRGB(40, 30, 60) }, dexPanel)
+local LOCKED_CELL = Color3.fromRGB(34, 31, 54)
+local TOTAL_ENTRIES = #Catalog.CHARACTERS * #Catalog.MUTATIONS
+local dexProgressBack = create("Frame", { Position = UDim2.fromOffset(16, 50), Size = UDim2.new(1, -32, 0, 30), BackgroundColor3 = Color3.fromRGB(40, 30, 60) }, dexPanel)
 round(dexProgressBack, 10)
 outline(dexProgressBack, Color3.new(0, 0, 0), 2)
 local dexProgressFill = create("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.fromRGB(170, 110, 255), BorderSizePixel = 0 }, dexProgressBack)
@@ -307,36 +315,9 @@ round(dexProgressFill, 10)
 create("UIGradient", { Color = ColorSequence.new(Color3.fromRGB(120, 200, 255), Color3.fromRGB(220, 110, 255)) }, dexProgressFill)
 local dexProgressText = label(dexProgressBack, { Size = UDim2.fromScale(1, 1), Text = "", TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 2 })
 create("UIPadding", { PaddingTop = UDim.new(0, 3), PaddingBottom = UDim.new(0, 3), PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, dexProgressText)
-local charTab = button(dexPanel, "🐮 BRAINROTS", Color3.fromRGB(150, 90, 230), { Position = UDim2.fromOffset(16, 86), Size = UDim2.new(0.5, -21, 0, 34) })
-local mutTab = button(dexPanel, "✦ MUTATIONS", Color3.fromRGB(90, 90, 120), { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -16, 0, 86), Size = UDim2.new(0.5, -21, 0, 34) })
-
-local function grid(cell: Vector2)
-	local frame = create("Frame", { Size = UDim2.new(1, -10, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, dexBody)
-	create("UIGridLayout", { CellSize = UDim2.fromOffset(cell.X, cell.Y), CellPadding = UDim2.fromOffset(8, 8), HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder }, frame)
-	create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 8) }, frame)
-	return frame
-end
-local charGrid = grid(Vector2.new(164, 222))
-local mutGrid = grid(Vector2.new(164, 168))
-mutGrid.Visible = false
-
-local function selectTab(characters: boolean)
-	charGrid.Visible = characters
-	mutGrid.Visible = not characters
-	charTab.BackgroundColor3 = if characters then Color3.fromRGB(150, 90, 230) else Color3.fromRGB(90, 90, 120)
-	mutTab.BackgroundColor3 = if characters then Color3.fromRGB(90, 90, 120) else Color3.fromRGB(150, 90, 230)
-	dexBody.CanvasPosition = Vector2.zero
-end
-charTab.MouseButton1Click:Connect(function()
-	selectTab(true)
-end)
-mutTab.MouseButton1Click:Connect(function()
-	selectTab(false)
-end)
-
-local function smallText(parent: Instance, y: number, height: number, text: string, color: Color3)
-	return label(parent, { Position = UDim2.fromOffset(6, y), Size = UDim2.new(1, -12, 0, height), Text = text, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center })
-end
+local dexStats = label(dexPanel, { Position = UDim2.fromOffset(16, 84), Size = UDim2.new(1, -32, 0, 20), Text = "", TextColor3 = Color3.fromRGB(215, 205, 255), TextXAlignment = Enum.TextXAlignment.Center })
+create("UITextSizeConstraint", { MaxTextSize = 17 }, dexStats)
+create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }, dexBody)
 
 local EFFECT_CLASSES = { "ParticleEmitter", "Sparkles", "Fire", "Smoke", "PointLight", "Highlight", "BillboardGui" }
 
@@ -367,7 +348,7 @@ local function portrait(viewport: ViewportFrame, id: string, mutationKey: string
 	end
 	model:PivotTo(CFrame.new())
 	model.Parent = viewport
-	local height = model:GetAttribute("Height") or 4
+	local height = tonumber(model:GetAttribute("Height")) or 4
 	local extents = model:GetExtentsSize()
 	local center = Vector3.new(0, height / 2, 0)
 	local distance = math.max(extents.X, extents.Y, extents.Z) * 1.55 + 1.5
@@ -377,67 +358,48 @@ local function portrait(viewport: ViewportFrame, id: string, mutationKey: string
 	end
 end
 
-local charCards = {}
+local dexSections = {}
 for index, def in Catalog.CHARACTERS do
-	local card = create("Frame", { Name = def.id, BackgroundColor3 = PANEL_LIGHT, LayoutOrder = index }, charGrid)
-	round(card, 12)
-	local stroke = outline(card, DIM, 2)
+	local rarity = Catalog.rarityOf(def.id)
+	local section = create("Frame", { Name = def.id, Size = UDim2.new(1, -12, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = PANEL_LIGHT, LayoutOrder = index }, dexBody)
+	round(section, 12)
+	local stroke = outline(section, DIM, 2)
+	create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8) }, section)
+	create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, section)
+	local header = create("Frame", { Size = UDim2.new(1, 0, 0, 60), BackgroundTransparency = 1, LayoutOrder = 1 }, section)
 	local viewport = create("ViewportFrame", {
-		Position = UDim2.fromOffset(6, 6),
-		Size = UDim2.new(1, -12, 0, 104),
+		Size = UDim2.fromOffset(60, 60),
 		BackgroundColor3 = Color3.fromRGB(28, 24, 48),
 		Ambient = Color3.fromRGB(190, 190, 200),
 		LightColor = Color3.new(1, 1, 1),
 		LightDirection = Vector3.new(-0.5, -1, 0.6),
-	}, card)
+	}, header)
 	round(viewport, 10)
 	local camera = Instance.new("Camera")
 	camera.FieldOfView = 40
 	camera.Parent = viewport
 	viewport.CurrentCamera = camera
-	label(card, { Position = UDim2.fromOffset(12, 8), Size = UDim2.fromOffset(44, 18), Text = string.format("#%02d", index), TextColor3 = Color3.fromRGB(200, 200, 230), ZIndex = 2 })
-	local nameLabel = smallText(card, 114, 22, "???", WHITE)
-	smallText(card, 137, 16, def.rarity, Catalog.rarityOf(def.id).color)
-	local infoLabel = smallText(card, 155, 16, "", Color3.fromRGB(200, 255, 210))
-	local passiveLabel = smallText(card, 173, 15, "", Color3.fromRGB(190, 200, 255))
-	local dots = create("Frame", { Position = UDim2.fromOffset(6, 196), Size = UDim2.new(1, -12, 0, 14), BackgroundTransparency = 1 }, card)
-	create("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }, dots)
-	local dotFrames = {}
+	local name = label(header, { Position = UDim2.fromOffset(70, 4), Size = UDim2.new(1, -160, 0, 26), Text = "", TextColor3 = WHITE })
+	create("UITextSizeConstraint", { MaxTextSize = 22 }, name)
+	local info = label(header, { Position = UDim2.fromOffset(70, 34), Size = UDim2.new(1, -160, 0, 20), Text = "", TextColor3 = rarity.color })
+	create("UITextSizeConstraint", { MaxTextSize = 16 }, info)
+	local count = label(header, { AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -2, 0.5, 0), Size = UDim2.fromOffset(84, 30), Text = "0/9", TextColor3 = GOLD, TextXAlignment = Enum.TextXAlignment.Right })
+	create("UITextSizeConstraint", { MaxTextSize = 22 }, count)
+	local grid = create("Frame", { Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 2 }, section)
+	create("UIGridLayout", { CellSize = UDim2.fromOffset(70, 56), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder }, grid)
+	local cells = {}
 	for mi, mutation in Catalog.MUTATIONS do
-		local dot = create("Frame", { Size = UDim2.fromOffset(13, 13), BackgroundColor3 = DIM, LayoutOrder = mi }, dots)
-		round(dot, 7)
-		outline(dot, Color3.new(0, 0, 0), 1)
-		dotFrames[mutation.key] = dot
+		local cell = create("Frame", { BackgroundColor3 = LOCKED_CELL, LayoutOrder = mi }, grid)
+		round(cell, 10)
+		local cellStroke = outline(cell, DIM, 2)
+		local top = label(cell, { Position = UDim2.fromOffset(4, 5), Size = UDim2.new(1, -8, 0, 22), Text = mutation.label, TextColor3 = mutation.color, TextXAlignment = Enum.TextXAlignment.Center })
+		create("UITextSizeConstraint", { MaxTextSize = 15, MinTextSize = 8 }, top)
+		local multText = if mutation.allIncome then "x" .. mutation.allIncome .. " ALL" else "x" .. mutation.mult
+		local bottom = label(cell, { Position = UDim2.fromOffset(4, 29), Size = UDim2.new(1, -8, 0, 21), Text = "🔒 " .. multText, TextColor3 = Color3.fromRGB(140, 135, 170), TextXAlignment = Enum.TextXAlignment.Center })
+		create("UITextSizeConstraint", { MaxTextSize = 14, MinTextSize = 8 }, bottom)
+		cells[mutation.key] = { frame = cell, stroke = cellStroke, top = top, bottom = bottom, mult = multText }
 	end
-	charCards[def.id] = { stroke = stroke, viewport = viewport, name = nameLabel, info = infoLabel, passive = passiveLabel, dots = dotFrames, shown = "" }
-end
-
-local mutCards = {}
-for index, mutation in Catalog.MUTATIONS do
-	local card = create("Frame", { Name = mutation.key, BackgroundColor3 = PANEL_LIGHT, LayoutOrder = index }, mutGrid)
-	round(card, 12)
-	local stroke = outline(card, DIM, 2)
-	local swatch = create("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 10), Size = UDim2.fromOffset(54, 54), BackgroundColor3 = DIM }, card)
-	round(swatch, 27)
-	outline(swatch, Color3.new(0, 0, 0), 2)
-	local gradient = create("UIGradient", {
-		Enabled = false,
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 60, 60)),
-			ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 240, 60)),
-			ColorSequenceKeypoint.new(0.66, Color3.fromRGB(60, 200, 255)),
-			ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 80, 255)),
-		}),
-		Rotation = 45,
-	}, swatch)
-	local mark = label(swatch, { Size = UDim2.fromScale(1, 1), Text = "?", TextXAlignment = Enum.TextXAlignment.Center })
-	local nameLabel = smallText(card, 70, 22, "???", WHITE)
-	local multText = if mutation.allIncome then "x" .. mutation.allIncome .. " ALL base income" else "x" .. mutation.mult .. " income"
-	smallText(card, 93, 17, multText, GOLD)
-	local sourceLabel = smallText(card, 112, 30, mutation.source or "", Color3.fromRGB(190, 200, 255))
-	sourceLabel.TextWrapped = true
-	local foundLabel = smallText(card, 145, 16, "", Color3.fromRGB(200, 255, 210))
-	mutCards[mutation.key] = { stroke = stroke, swatch = swatch, gradient = gradient, mark = mark, name = nameLabel, found = foundLabel }
+	dexSections[def.id] = { stroke = stroke, viewport = viewport, name = name, info = info, count = count, cells = cells, shown = "" }
 end
 
 local lastDexJson = nil
@@ -454,73 +416,71 @@ local function refreshDex()
 		data = {}
 	end
 	local owned = {} -- [id] = { [mutationKey] = true }
-	local mutationFound = {} -- [mutationKey] = how many brainrots you've owned in it
-	local characters, variants = 0, 0
+	local mutationSeen = {}
+	local characters, entries, completeSets = 0, 0, 0
 	for id, list in data do
 		if Catalog.BY_ID[id] and type(list) == "table" then
 			owned[id] = {}
 			characters += 1
 			for _, key in list do
-				if Catalog.MUTATION_BY_KEY[key] then
+				if Catalog.MUTATION_BY_KEY[key] and not owned[id][key] then
 					owned[id][key] = true
-					variants += 1
-					mutationFound[key] = (mutationFound[key] or 0) + 1
+					entries += 1
+					mutationSeen[key] = true
 				end
 			end
 		end
 	end
 	local mutations = 0
-	for _ in mutationFound do
+	for _ in mutationSeen do
 		mutations += 1
 	end
-	local totalChars, totalMuts = #Catalog.CHARACTERS, #Catalog.MUTATIONS
-	local fraction = (characters + mutations) / (totalChars + totalMuts)
-	local percent = math.floor(fraction * 100 + 0.5)
+	local fraction = entries / TOTAL_ENTRIES
 	dexProgressFill.Size = UDim2.fromScale(fraction, 1)
-	dexProgressText.Text = "Brainrots " .. characters .. "/" .. totalChars .. "  ·  Mutations " .. mutations .. "/" .. totalMuts
-		.. "  ·  Variants " .. variants .. "/" .. totalChars * totalMuts .. "  ·  " .. percent .. "%"
-	charTab.Text = "🐮 BRAINROTS " .. characters .. "/" .. totalChars
-	mutTab.Text = "✦ MUTATIONS " .. mutations .. "/" .. totalMuts
-	dexButton.Text = "📖 DEX " .. percent .. "%"
+	dexProgressText.Text = "📖 COLLECTION " .. entries .. "/" .. TOTAL_ENTRIES .. "  ·  " .. math.floor(fraction * 100 + 0.5) .. "%"
+	dexButton.Text = "📖 " .. entries .. "/" .. TOTAL_ENTRIES
 
 	for _, def in Catalog.CHARACTERS do
-		local card = charCards[def.id]
+		local section = dexSections[def.id]
 		local found = owned[def.id]
+		local have = 0
 		local best = nil
-		if found then
-			for index = #Catalog.MUTATIONS, 1, -1 do
-				local key = Catalog.MUTATIONS[index].key
-				if found[key] and key ~= "TrainGod" then
-					best = key
-					break
+		for index, mutation in Catalog.MUTATIONS do
+			local cell = section.cells[mutation.key]
+			local got = found ~= nil and found[mutation.key] == true
+			if got then
+				have += 1
+				if mutation.key ~= "TrainGod" and (best == nil or index > (Catalog.MUTATION_INDEX[best] or 0)) then
+					best = mutation.key
 				end
 			end
-			best = best or "TrainGod"
+			cell.frame.BackgroundColor3 = if got then mutation.color:Lerp(PANEL, 0.62) else LOCKED_CELL
+			cell.stroke.Color = if got then mutation.color else DIM
+			cell.top.TextColor3 = if got then mutation.color else mutation.color:Lerp(DIM, 0.55)
+			cell.bottom.Text = if got then "✓ " .. cell.mult else "🔒 " .. cell.mult
+			cell.bottom.TextColor3 = if got then WHITE else Color3.fromRGB(140, 135, 170)
+		end
+		if found and not best then
+			best = "TrainGod"
+		end
+		if have == #Catalog.MUTATIONS then
+			completeSets += 1
 		end
 		local shown = best or "?"
-		if card.shown ~= shown then
-			card.shown = shown
-			portrait(card.viewport, def.id, best)
+		if section.shown ~= shown then
+			section.shown = shown
+			portrait(section.viewport, def.id, best)
 		end
-		card.stroke.Color = if found then Catalog.rarityOf(def.id).color else DIM
-		card.name.Text = if found then def.name else "???"
-		card.info.Text = if found then Format.perSecond(def.income) .. " · ATK " .. def.atk else "Not found yet"
-		card.passive.Text = if found then "✨ " .. def.passive.name else ""
-		for key, dot in card.dots do
-			dot.BackgroundColor3 = if found and found[key] then Catalog.MUTATION_BY_KEY[key].color else DIM
-		end
+		local rarity = Catalog.rarityOf(def.id)
+		local complete = have == #Catalog.MUTATIONS
+		section.stroke.Color = if complete then GOLD elseif found then rarity.color else DIM
+		section.name.Text = string.format("#%02d  ", table.find(Catalog.CHARACTERS, def) or 0) .. (if found then def.name else "???")
+		section.info.Text = rarity.key .. (if found then "  ·  " .. Format.perSecond(def.income) .. "  ·  ✨ " .. def.passive.name else "  ·  not found yet")
+		section.count.Text = (if complete then "★ " else "") .. have .. "/" .. #Catalog.MUTATIONS
+		section.count.TextColor3 = if complete then GOLD elseif have > 0 then WHITE else Color3.fromRGB(140, 135, 170)
 	end
-	for _, mutation in Catalog.MUTATIONS do
-		local card = mutCards[mutation.key]
-		local count = mutationFound[mutation.key]
-		card.stroke.Color = if count then mutation.color else DIM
-		card.swatch.BackgroundColor3 = if count then (if mutation.key == "Rainbow" then WHITE else mutation.color) else DIM
-		card.gradient.Enabled = count ~= nil and mutation.key == "Rainbow"
-		card.mark.Text = if count then "" else "?"
-		card.name.Text = if count then string.upper(mutation.label) else "???"
-		card.name.TextColor3 = if count then mutation.color else WHITE
-		card.found.Text = "Owned on " .. (count or 0) .. "/" .. totalChars .. " brainrots"
-	end
+	dexStats.Text = "Brainrots " .. characters .. "/" .. #Catalog.CHARACTERS .. "  ·  Mutations " .. mutations .. "/" .. #Catalog.MUTATIONS
+		.. "  ·  ★ Complete sets " .. completeSets .. "/" .. #Catalog.CHARACTERS
 end
 
 ---------------------------------------------------------------------------------------------------------------
@@ -714,7 +674,7 @@ create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.La
 label(stashBody, {
 	Size = UDim2.new(1, -10, 0, 0),
 	AutomaticSize = Enum.AutomaticSize.Y,
-	Text = "Keep brainrots safe off your head: disasters, thieves and bandits can't touch your Stash, and the Barn Fuse Machine can use it. More space in the ⚡ Upgrade Shop. Press G to drop what you carry.",
+	Text = "Keep brainrots safe off your head: disasters, thieves and bandits can't touch your Stash, and the Barn Fuse Machine can use it. More space in the ⚡ Upgrade Shop. Press F to stash what you carry, G to drop it.",
 	TextScaled = false,
 	TextSize = 16,
 	TextWrapped = true,
@@ -831,9 +791,17 @@ end)
 dropButton.MouseButton1Click:Connect(function()
 	Request:FireServer("Drop")
 end)
+storeButton.MouseButton1Click:Connect(function()
+	Request:FireServer("StashStore")
+end)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if not gameProcessed and input.KeyCode == Enum.KeyCode.G then
+	if gameProcessed then
+		return
+	end
+	if input.KeyCode == Enum.KeyCode.G then
 		Request:FireServer("Drop")
+	elseif input.KeyCode == Enum.KeyCode.F then
+		Request:FireServer("StashStore")
 	end
 end)
 
@@ -1075,10 +1043,22 @@ gui.Parent = player:WaitForChild("PlayerGui")
 local notifyOrder = 0
 local function pushNotification(text: string, color: Color3)
 	notifyOrder += 1
-	local item = create("Frame", { Size = UDim2.fromOffset(620, 36), BackgroundColor3 = PANEL, BackgroundTransparency = 0.2, LayoutOrder = notifyOrder }, feed)
-	round(item, 10)
-	local stroke = outline(item, color, 2)
-	local text_ = label(item, { Position = UDim2.fromOffset(10, 4), Size = UDim2.new(1, -20, 1, -8), Text = text, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Center })
+	local oneLine = string.gsub(text, "%s*\n%s*", "  ")
+	local item = create("Frame", { Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = PANEL, BackgroundTransparency = 0.15, LayoutOrder = notifyOrder }, feed)
+	round(item, 8)
+	local stroke = outline(item, color, 1.5)
+	create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10) }, item)
+	local text_ = label(item, {
+		Size = UDim2.fromScale(0, 1),
+		AutomaticSize = Enum.AutomaticSize.X,
+		Text = oneLine,
+		TextColor3 = color,
+		TextScaled = false,
+		TextSize = 15,
+		TextWrapped = false,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+	})
+	create("UISizeConstraint", { MaxSize = Vector2.new(440, 26) }, text_)
 	local items = {}
 	for _, child in feed:GetChildren() do
 		if child:IsA("Frame") then
@@ -1088,16 +1068,16 @@ local function pushNotification(text: string, color: Color3)
 	table.sort(items, function(a, b)
 		return a.LayoutOrder < b.LayoutOrder
 	end)
-	for i = 1, #items - 4 do
+	for i = 1, #items - TOAST_MAX do
 		items[i]:Destroy()
 	end
-	task.delay(4.5, function()
+	task.delay(TOAST_SECONDS - 0.35, function()
 		if item.Parent then
-			local info = TweenInfo.new(0.5)
+			local info = TweenInfo.new(0.35)
 			TweenService:Create(item, info, { BackgroundTransparency = 1 }):Play()
 			TweenService:Create(text_, info, { TextTransparency = 1 }):Play()
 			TweenService:Create(stroke, info, { Transparency = 1 }):Play()
-			task.wait(0.5)
+			task.wait(0.35)
 			item:Destroy()
 		end
 	end)
@@ -1237,13 +1217,13 @@ RunService.RenderStepped:Connect(function(dt)
 
 	local lockUntil, lockReadyAt = attr("LockUntil", 0), attr("LockReadyAt", 0)
 	if now < lockUntil then
-		lockButton.Text = "🔒 LOCKED " .. Format.seconds(lockUntil - now)
+		lockButton.Text = "🔒 " .. Format.seconds(lockUntil - now)
 		lockButton.BackgroundColor3 = Color3.fromRGB(60, 180, 90)
 	elseif now < lockReadyAt then
-		lockButton.Text = "⏳ LOCK " .. Format.seconds(lockReadyAt - now)
+		lockButton.Text = "⏳ " .. Format.seconds(lockReadyAt - now)
 		lockButton.BackgroundColor3 = Color3.fromRGB(110, 110, 130)
 	else
-		lockButton.Text = "🔓 LOCK BASE"
+		lockButton.Text = "🔓 LOCK"
 		lockButton.BackgroundColor3 = Color3.fromRGB(230, 70, 70)
 	end
 
@@ -1258,7 +1238,10 @@ RunService.RenderStepped:Connect(function(dt)
 		refreshStash()
 	end
 	stashButton.Text = "📦 STASH " .. attr("StashCount", 0) .. "/" .. attr("StashMax", 2)
-	dropButton.BackgroundColor3 = if attr("CarryCount", 0) > 0 then Color3.fromRGB(190, 120, 60) else Color3.fromRGB(100, 95, 110)
+	local carrying = attr("CarryCount", 0) > 0
+	dropButton.BackgroundColor3 = if carrying then Color3.fromRGB(190, 120, 60) else Color3.fromRGB(100, 95, 110)
+	local stashRoom = attr("StashCount", 0) < attr("StashMax", 2)
+	storeButton.BackgroundColor3 = if carrying and stashRoom then Color3.fromRGB(70, 150, 200) else Color3.fromRGB(100, 95, 110)
 	if rebirthPanel.Visible then
 		local cost = attr("RebirthCost", GameConfig.rebirthCost(rebirths))
 		rebirthInfo.Text = "Cost: " .. Format.cash(cost) .. "\nReward: x" .. GameConfig.rebirthMultiplier(rebirths + 1)

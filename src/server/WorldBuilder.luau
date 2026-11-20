@@ -1,6 +1,6 @@
 -- WorldBuilder: builds the 3D map when the server starts - the high base plateau ("Markas") with six
--- player plots (slot pads, COLLECT pad, LOCK pad, owner sign, lock barrier), the ramp down into the
--- four-zone brainrot field, the safe hills, the title sign, trees, boundary walls and the lighting.
+-- player plots (slot pads, COLLECT pad, LOCK pad, a wooden farm gate with the owner's name, lock barrier), the ramp down into the
+-- four-zone brainrot field, the safe hills, trees, boundary walls and the lighting.
 -- (The village west of the plateau is VillageBuilder's job; the walls here leave room for it.)
 -- Returns the layout the other services use: plots (with their slot CFrames) and hills.
 
@@ -257,11 +257,57 @@ local function buildPlot(parent: Instance, index: number, cx: number)
 	surfaceText(lockPad, Enum.NormalId.Top, "LOCK", Color3.new(1, 1, 1))
 	local lockLabel = billboard(lockPad, "🔓 LOCK BASE", Color3.fromRGB(255, 150, 150), Vector3.new(0, 4, 0), UDim2.fromOffset(200, 44), PLOT_LABEL_DISTANCE)
 
-	local sign = part(model, "Sign", Vector3.new(26, 7, 1), CFrame.new(cx, TOP + 6.5, minZ + 1), Color3.fromRGB(30, 28, 45))
+	-- The farm gate at the plot's entrance (the side facing the ramp): two tall slim posts with lanterns, a
+	-- curved wooden arch and the owner's name board hanging high up - the view onto the nine slots stays open.
+	local gateZ = maxZ - 1
+	local postX = width / 2 - 1.2
+	local postH = 17
+	local iron = Color3.fromRGB(45, 45, 50)
 	for _, side in { -1, 1 } do
-		part(model, "SignPost", Vector3.new(1, 6, 1), CFrame.new(cx + side * 11, TOP + 3, minZ + 1), Color3.fromRGB(30, 28, 45))
+		local x = cx + side * postX
+		part(model, "GateFoot", Vector3.new(1.9, 1, 1.9), CFrame.new(x, TOP + 0.5, gateZ), Color3.fromRGB(140, 135, 128), Enum.Material.Cobblestone)
+		part(model, "GatePost", Vector3.new(1.1, postH, 1.1), CFrame.new(x, TOP + postH / 2, gateZ), DARK_WOOD, Enum.Material.Wood)
+		part(model, "GatePostCap", Vector3.new(1.6, 0.5, 1.6), CFrame.new(x, TOP + postH + 0.25, gateZ), color, Enum.Material.SmoothPlastic)
+		-- A lantern on a bracket, hung on the field side of the post.
+		local bracket = part(model, "LanternBracket", Vector3.new(0.25, 0.25, 1.5), CFrame.new(x, TOP + 11.6, gateZ + 0.9), iron, Enum.Material.Metal)
+		bracket.CanCollide = false
+		local lamp = part(model, "Lantern", Vector3.new(0.9, 1.2, 0.9), CFrame.new(x, TOP + 10.8, gateZ + 1.55), Color3.fromRGB(255, 200, 110), Enum.Material.Neon)
+		lamp.CanCollide = false
+		part(model, "LanternCap", Vector3.new(1.2, 0.3, 1.2), CFrame.new(x, TOP + 11.55, gateZ + 1.55), iron, Enum.Material.Metal).CanCollide = false
+		part(model, "LanternBase", Vector3.new(1.1, 0.2, 1.1), CFrame.new(x, TOP + 10.1, gateZ + 1.55), iron, Enum.Material.Metal).CanCollide = false
+		local glow = Instance.new("PointLight")
+		glow.Color = Color3.fromRGB(255, 190, 110)
+		glow.Range = 14
+		glow.Brightness = 1.4
+		glow.Parent = lamp
 	end
-	local signLabel = surfaceText(sign, Enum.NormalId.Back, "EMPTY BASE", color)
+	-- The arch: plank segments along a gentle curve between the post tops.
+	local span, rise, segments = 2 * postX, 2.6, 8
+	local function archPoint(u: number): Vector3
+		return Vector3.new(cx - postX + span * u, TOP + postH - 0.4 + rise * math.sin(math.pi * u), gateZ)
+	end
+	for i = 0, segments - 1 do
+		local a, b = archPoint(i / segments), archPoint((i + 1) / segments)
+		local plank = part(model, "GateArch", Vector3.new(1.1, 0.8, (b - a).Magnitude + 0.35), CFrame.lookAt((a + b) / 2, b), WOOD, Enum.Material.WoodPlanks)
+		plank.CanCollide = false
+	end
+	-- The name board hangs from the arch on two short chains, well above head height.
+	local boardY = TOP + postH - 2.6
+	local board = part(model, "GateSign", Vector3.new(16, 2.6, 0.35), CFrame.new(cx, boardY, gateZ), Color3.fromRGB(165, 112, 66), Enum.Material.WoodPlanks)
+	board.CanCollide = false
+	for _, y in { boardY + 1.4, boardY - 1.4 } do
+		part(model, "GateSignTrim", Vector3.new(16.2, 0.2, 0.45), CFrame.new(cx, y, gateZ), color, Enum.Material.Neon).CanCollide = false
+	end
+	for _, dx in { -6, 6 } do
+		local top = archPoint((postX + dx) / span).Y
+		local bottom = boardY + 1.5
+		local chain = part(model, "GateChain", Vector3.new(0.18, top - bottom, 0.18), CFrame.new(cx + dx, (top + bottom) / 2, gateZ), iron, Enum.Material.Metal)
+		chain.CanCollide = false
+	end
+	local signLabels = {
+		surfaceText(board, Enum.NormalId.Back, "EMPTY FARM", Color3.fromRGB(255, 240, 200)),
+		surfaceText(board, Enum.NormalId.Front, "EMPTY FARM", Color3.fromRGB(255, 240, 200)),
+	}
 
 	local barrier = {}
 	local function wall(size: Vector3, position: Vector3)
@@ -293,7 +339,7 @@ local function buildPlot(parent: Instance, index: number, cx: number)
 		vaultLabel = vaultLabel,
 		lockPad = lockPad,
 		lockLabel = lockLabel,
-		signLabel = signLabel,
+		signLabels = signLabels,
 		barrier = barrier,
 		spawnCFrame = CFrame.lookAt(Vector3.new(cx, TOP + 4, maxZ - 3), Vector3.new(cx, TOP + 4, maxZ + 20)),
 		owner = nil,
@@ -354,15 +400,7 @@ function WorldBuilder.build()
 	spawn.Duration = 0
 	spawn.Parent = world
 
-	-- Title sign over the ramp, readable from the base and from the field.
-	local title = part(world, "TitleSign", Vector3.new(84, 12, 2), CFrame.new(0, TOP + 26, -78), Color3.fromRGB(35, 25, 60))
-	for _, side in { -1, 1 } do
-		part(world, "TitlePillar", Vector3.new(2, 26, 2), CFrame.new(side * 41, TOP + 13, -78), Color3.fromRGB(35, 25, 60))
-	end
-	-- Front (-Z) faces the bases, so the title is what a player looking out over the field reads.
-	surfaceText(title, Enum.NormalId.Front, "🌪️ " .. GameConfig.GAME_TITLE .. " 🐂", Color3.fromRGB(255, 230, 80))
-	surfaceText(title, Enum.NormalId.Back, "RUN HOME BEFORE DISASTER STRIKES!", Color3.fromRGB(120, 230, 255))
-
+	-- (No title board over the ramp: the view from the bases out over the field stays open.)
 	local plots = {}
 	for index, cx in GameConfig.PLOT_X do
 		plots[index] = buildPlot(world, index, cx)

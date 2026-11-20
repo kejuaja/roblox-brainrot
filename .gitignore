@@ -1,0 +1,5 @@
+# Roblox Studio's lock file while game.rbxl is open
+*.rbxl.lock
+*.rbxlx.lock
+# Local hand-in output (MAKEFUN_OUTPUT_DIR=out node main.ts)
+out/

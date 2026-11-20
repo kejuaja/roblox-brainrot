@@ -183,7 +183,8 @@ local function dexCounts(state): (number, number)
 	return characters, mutations
 end
 
--- Records that the player now owns this character + mutation. New DEX entries pop a notification.
+-- Records that the player now owns this character + mutation - one of the DEX's 144 collection entries.
+-- A new entry pops a toast with the collection count.
 function PlayerState.discover(state, id: string, mutationKey: string)
 	if not Catalog.BY_ID[id] or not Catalog.MUTATION_BY_KEY[mutationKey] then
 		return
@@ -197,15 +198,16 @@ function PlayerState.discover(state, id: string, mutationKey: string)
 	state.dex[id] = known or {}
 	state.dex[id][mutationKey] = true
 	PlayerState.syncDex(state)
-	local characters, mutations = dexCounts(state)
-	local purple = Color3.fromRGB(200, 150, 255)
-	if newCharacter then
-		Remotes.notify(state.player, "📖 NEW DEX ENTRY: " .. Catalog.BY_ID[id].name .. "! (" .. characters .. "/" .. #Catalog.CHARACTERS .. ")", purple)
+	local _, mutations = dexCounts(state)
+	local entries = 0
+	for _, owned in state.dex do
+		for _ in owned do
+			entries += 1
+		end
 	end
-	if mutations > mutationsBefore then
-		local mutation = Catalog.MUTATION_BY_KEY[mutationKey]
-		Remotes.notify(state.player, "📖 New mutation in your DEX: " .. string.upper(mutation.label) .. "! (" .. mutations .. "/" .. #Catalog.MUTATIONS .. ")", mutation.color)
-	end
+	local total = #Catalog.CHARACTERS * #Catalog.MUTATIONS
+	local tag = if newCharacter then "NEW BRAINROT" elseif mutations > mutationsBefore then "NEW MUTATION" else "NEW ENTRY"
+	Remotes.notify(state.player, "📖 DEX " .. tag .. ": " .. Catalog.displayName(id, mutationKey) .. " (" .. entries .. "/" .. total .. ")", Catalog.MUTATION_BY_KEY[mutationKey].color:Lerp(Color3.fromRGB(200, 150, 255), 0.4))
 end
 
 function PlayerState.slotCount(state): number

@@ -11,6 +11,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Catalog = require(Shared:WaitForChild("BrainrotCatalog"))
+local GameConfig = require(Shared:WaitForChild("GameConfig"))
 local PlayerState = require(script.Parent:WaitForChild("PlayerState"))
 local CarryService = require(script.Parent:WaitForChild("CarryService"))
 local BrainrotSpawner = require(script.Parent:WaitForChild("BrainrotSpawner"))
@@ -137,6 +138,8 @@ function StashService.pickUpFromBase(state, index: number, who: Player, removeSl
 		return
 	end
 	removeSlot(state, index)
+	-- Don't let the deposit check put it straight back while they're still standing on the tiles.
+	state.depositPausedUntil = os.clock() + GameConfig.PICKUP_DEPOSIT_COOLDOWN
 	local name = Catalog.displayName(entry.id, entry.mutation)
 	if toHands then
 		CarryService.give(state, entry.id, entry.mutation)

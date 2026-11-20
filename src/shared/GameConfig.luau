@@ -29,6 +29,8 @@ GameConfig.BASE_SLOTS = 9
 GameConfig.SLOTS_PER_REBIRTH = 0
 GameConfig.MAX_SLOTS = 9
 GameConfig.LOCK_COOLDOWN = 25
+-- After a Pick Up from a pedestal, standing on your own tiles doesn't auto-place for this many seconds.
+GameConfig.PICKUP_DEPOSIT_COOLDOWN = 2.5
 -- BillboardGui ranges: plots are 32 studs apart, so base labels fade out before a neighbour's overlap them.
 GameConfig.PLOT_LABEL_DISTANCE = 30 -- COLLECT / LOCK pad labels
 GameConfig.PLACED_LABEL_DISTANCE = 38 -- labels over brainrots standing in a base

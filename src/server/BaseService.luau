@@ -76,7 +76,6 @@ function BaseService.spawnSlotModel(state, index: number)
 	local sellValue = Catalog.incomeFor(entry.id, entry.mutation) * GameConfig.SELL_SECONDS
 	local sell = prompt(model.PrimaryPart, "SellPrompt", "Sell " .. Format.cash(sellValue), name, 0.6)
 	local steal = prompt(model.PrimaryPart, "StealPrompt", "Steal!", name, 1.6)
-	steal.KeyboardKeyCode = Enum.KeyCode.F
 	-- The owner can lift a brainrot off its pedestal again: into their hands, or the Stash if hands are full.
 	local pickUp = prompt(model.PrimaryPart, "PickUpPrompt", "Pick Up", name, 0.35)
 	pickUp.KeyboardKeyCode = Enum.KeyCode.R
@@ -244,8 +243,8 @@ end
 
 -- Puts everything the player carries onto free slots once they step onto their own plot.
 function BaseService.depositIfHome(state)
-	if #state.carried == 0 then
-		return
+	if #state.carried == 0 or os.clock() < (state.depositPausedUntil or 0) then
+		return -- nothing to place, or a Pick Up just happened (GameConfig.PICKUP_DEPOSIT_COOLDOWN)
 	end
 	local character = state.player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -318,7 +317,9 @@ function BaseService.assignPlot(state)
 		if not plot.owner then
 			plot.owner = state.player
 			state.plot = plot
-			plot.signLabel.Text = state.player.DisplayName .. "'s BASE"
+			for _, label in plot.signLabels do
+				label.Text = string.upper(state.player.DisplayName) .. "'S FARM"
+			end
 			for index in state.slots do
 				BaseService.spawnSlotModel(state, index)
 			end
@@ -342,7 +343,9 @@ function BaseService.releasePlot(state)
 		end
 	end
 	plot.owner = nil
-	plot.signLabel.Text = "EMPTY BASE"
+	for _, label in plot.signLabels do
+		label.Text = "EMPTY FARM"
+	end
 	plot.vaultLabel.Text = "💰 $0"
 	plot.lockLabel.Text = "🔓 LOCK BASE"
 	for _, pad in plot.slotPads do
